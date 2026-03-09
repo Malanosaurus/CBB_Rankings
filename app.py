@@ -9,7 +9,7 @@ st.write("Statistically predictive rankings and H2H matchup predictor.")
 # 2. Load the data
 @st.cache_data
 def load_data():
-    kp_df = pd.read_excel('NCAA Rankings-V3.xlsx')
+    kp_df = pd.read_csv('summary26.csv')
     torvik_df = pd.read_csv('2026_team_results.csv')
     
     torvik_df = torvik_df.rename(columns={'team': 'TeamName'})
