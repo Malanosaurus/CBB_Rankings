@@ -97,13 +97,19 @@ with col2:
     team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Louisville") if "Louisville" in team_list else 1)
 
 if team_a and team_b and team_a != team_b:
-    pct_a = df[df['TeamName'] == team_a]['Raw Win Pct'].values[0]
-    pct_b = df[df['TeamName'] == team_b]['Raw Win Pct'].values[0]
-    em_a = df[df['TeamName'] == team_a]['AdjEM'].values[0]
-    em_b = df[df['TeamName'] == team_b]['AdjEM'].values[0]
-    tempo_a = df[df['TeamName'] == team_a]['AdjTempo'].values[0]
-    tempo_b = df[df['TeamName'] == team_b]['AdjTempo'].values[0]
+    # Get all the stats for Team A
+    team_a_data = df[df['TeamName'] == team_a].iloc[0]
+    pct_a = team_a_data['Raw Win Pct']
+    em_a = team_a_data['AdjEM']
+    tempo_a = team_a_data['AdjTempo']
     
+    # Get all the stats for Team B
+    team_b_data = df[df['TeamName'] == team_b].iloc[0]
+    pct_b = team_b_data['Raw Win Pct']
+    em_b = team_b_data['AdjEM']
+    tempo_b = team_b_data['AdjTempo']
+    
+    # Run the Math
     prob_a = (pct_a - (pct_a * pct_b)) / (pct_a + pct_b - (2 * pct_a * pct_b))
     prob_b = 1 - prob_a
     
@@ -118,8 +124,38 @@ if team_a and team_b and team_a != team_b:
         spread_text = f"**{team_b} -{abs(point_spread):.1f}**"
         winner_text = f"🏆 **{team_b}** has a **{prob_b * 100:.1f}%** chance to win."
     
+    # Display the Result
     st.subheader("Matchup Result:")
     st.success(f"{winner_text} \n\n🏀 **Predicted Spread:** {spread_text} (Pace: {expected_possessions:.1f} possessions)")
+    
+    # --- NEW: TALE OF THE TAPE ---
+    st.write("### 📊 Tale of the Tape")
+    
+    # Create 3 columns: Team A stats | Stat Labels | Team B stats
+    tcol1, tcol2, tcol3 = st.columns([2, 1, 2])
+    
+    with tcol1:
+        st.markdown(f"#### {team_a}")
+        st.write(f"**{team_a_data['Team Profile']}**" if team_a_data['Team Profile'] != "" else "*(No specific profile)*")
+        st.metric("Power Rank", f"#{team_a_data['Power Rank']}")
+        st.metric("Wins Above Bubble", team_a_data['WAB'])
+        st.metric("Elite SOS", team_a_data['Elite SOS'])
+        
+    with tcol2:
+        # Just some visual spacing and labels in the middle
+        st.markdown("#### vs")
+        st.write("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; color: gray;'>Rank</div>", unsafe_allow_html=True)
+        st.markdown("<br><div style='text-align: center; color: gray;'>WAB</div>", unsafe_allow_html=True)
+        st.markdown("<br><div style='text-align: center; color: gray;'>Elite SOS</div>", unsafe_allow_html=True)
+
+    with tcol3:
+        st.markdown(f"#### {team_b}")
+        st.write(f"**{team_b_data['Team Profile']}**" if team_b_data['Team Profile'] != "" else "*(No specific profile)*")
+        st.metric("Power Rank", f"#{team_b_data['Power Rank']}")
+        st.metric("Wins Above Bubble", team_b_data['WAB'])
+        st.metric("Elite SOS", team_b_data['Elite SOS'])
+
 elif team_a == team_b:
     st.warning("Please select two different teams to see a matchup.")
 
