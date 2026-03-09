@@ -9,7 +9,7 @@ st.write("Statistically predictive rankings and H2H matchup predictor.")
 # 2. Load the data
 @st.cache_data
 def load_data():
-    # Reading the Excel file (as you set up earlier!)
+    # Reading the Excel file
     kp_df = pd.read_excel('NCAA Rankings-V3.xlsx')
     
     # Load Torvik data
@@ -21,11 +21,26 @@ def load_data():
     # Merge the Torvik stats into our main KenPom dataframe
     df = pd.merge(kp_df, torvik_df[['TeamName', 'WAB', 'ncsos', 'sos']], on='TeamName', how='left')
     
+    # Fill any missing merge values to prevent math errors
+    df['WAB'] = df['WAB'].fillna(0)
+    df['ncsos'] = df['ncsos'].fillna(df['ncsos'].mean())
+    
     # Calculate Raw Win % (we need the raw decimals for the matchup math)
     df['Raw Win Pct'] = (df['AdjOE']**11.5) / (df['AdjOE']**11.5 + df['AdjDE']**11.5)
 
-    # Add a Numerical Ranking (1 to 360+) based on the Raw Win Pct
-    df['Power Rank'] = df['Raw Win Pct'].rank(ascending=False, method='min').astype(int)
+    # ==========================================
+    # 🧮 COMPOSITE POWER RANKING MATH
+    # ==========================================
+    # 1. Normalize all three metrics to a 0.0 - 1.0 scale so they can be combined fairly
+    win_norm = (df['Raw Win Pct'] - df['Raw Win Pct'].min()) / (df['Raw Win Pct'].max() - df['Raw Win Pct'].min())
+    wab_norm = (df['WAB'] - df['WAB'].min()) / (df['WAB'].max() - df['WAB'].min())
+    sos_norm = (df['ncsos'] - df['ncsos'].min()) / (df['ncsos'].max() - df['ncsos'].min())
+    
+    # 2. Create the Weighted Composite Score (60% Math, 30% WAB, 10% SOS)
+    df['Composite Score'] = (win_norm * 0.60) + (wab_norm * 0.30) + (sos_norm * 0.10)
+    
+    # 3. Add a Numerical Ranking (1 to 360+) based on the new Composite Score!
+    df['Power Rank'] = df['Composite Score'].rank(ascending=False, method='min').astype(int)
     
     # Calculate Team Profile
     def tag_team(row):
@@ -44,7 +59,7 @@ def load_data():
     df['Predicted Win %'] = (df['Raw Win Pct'] * 100).round(2).astype(str) + '%'
     df['AdjEM'] = df['AdjEM'].round(2)
     
-    # Format Torvik Stats
+    # Format Torvik Stats for display
     df['WAB'] = df['WAB'].round(1)
     df['NC-SOS'] = df['ncsos'].round(3)
     
@@ -112,12 +127,12 @@ st.divider() # Draws a nice line across the screen
 # 📊 FULL TEAM RANKINGS TABLE
 # ==========================================
 st.header("📊 Full Team Rankings")
-st.write("**WAB:** Wins Above Bubble | **NC-SOS:** Non-Conference Strength of Schedule")
+st.write("**Power Rank** is a composite score heavily weighting Efficiency (60%), Wins Above Bubble (30%), and Non-Con SOS (10%).")
 
 # Select only the columns we want to show
 display_df = df[['Power Rank', 'TeamName', 'AdjEM', 'Predicted Win %', 'WAB', 'NC-SOS', 'Team Profile']]
 
-# Sort by Predicted Win % (highest to lowest)
+# Sort by Power Rank (highest composite score to lowest)
 display_df = display_df.sort_values(by='Power Rank', ascending=True)
 
 # Add a search bar to look up specific teams
