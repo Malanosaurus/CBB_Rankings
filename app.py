@@ -14,6 +14,9 @@ def load_data():
     
     # Calculate Raw Win % (we need the raw decimals for the matchup math)
     df['Raw Win Pct'] = (df['AdjOE']**11.5) / (df['AdjOE']**11.5 + df['AdjDE']**11.5)
+
+    # Add a Numerical Ranking (1 to 360+) based on the Raw Win Pct
+    df['Power Rank'] = df['Raw Win Pct'].rank(ascending=False, method='min').astype(int)
     
     # Calculate Team Profile
     def tag_team(row):
@@ -98,10 +101,10 @@ st.divider() # Draws a nice line across the screen
 st.header("📊 Full Team Rankings")
 
 # Select only the columns we want to show
-display_df = df[['TeamName', 'AdjEM', 'Predicted Win %', 'Team Profile']]
+display_df = df[['Power Rank', 'TeamName', 'AdjEM', 'Predicted Win %', 'Team Profile']]
 
 # Sort by Predicted Win % (highest to lowest)
-display_df = display_df.sort_values(by='Predicted Win %', ascending=False)
+display_df = display_df.sort_values(by='Power Rank', ascending=True)
 
 # Add a search bar to look up specific teams
 search = st.text_input("Search for a team to filter the table:")
