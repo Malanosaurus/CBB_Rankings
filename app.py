@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 
 # 1. Set up the web page
-st.set_page_config(page_title="NCAA March Madness Predictor", layout="wide")
-st.title("🏀 NCAA Tournament Predictive Model")
-st.write("Rankings based on KenPom-style Adjusted Efficiency Margin and Pythagorean Win Expectancy.")
+st.set_page_config(page_title="2026 NCAA CBB Rankings", layout="wide")
+st.title("🏀 2026 CBB Predictive Rankings")
+st.write("Statistically predictive rankings and H2H matchup predictor.")
 
 # 2. Load the data
 @st.cache_data
