@@ -10,7 +10,16 @@ st.write("Statistically predictive rankings and H2H matchup predictor.")
 @st.cache_data
 def load_data():
     # Reading the Excel file (as you set up earlier!)
-    df = pd.read_excel('NCAA Rankings-V3.xlsx')
+    kp_df = pd.read_excel('NCAA Rankings-V3.xlsx')
+    
+    # Load Torvik data
+    torvik_df = pd.read_csv('2026_team_results.csv')
+    
+    # Clean up team names in Torvik to make sure they match
+    torvik_df = torvik_df.rename(columns={'team': 'TeamName'})
+    
+    # Merge the Torvik stats into our main KenPom dataframe
+    df = pd.merge(kp_df, torvik_df[['TeamName', 'WAB', 'ncsos', 'sos']], on='TeamName', how='left')
     
     # Calculate Raw Win % (we need the raw decimals for the matchup math)
     df['Raw Win Pct'] = (df['AdjOE']**11.5) / (df['AdjOE']**11.5 + df['AdjDE']**11.5)
@@ -34,6 +43,10 @@ def load_data():
     # Format the Display Win % as a nice percentage string
     df['Predicted Win %'] = (df['Raw Win Pct'] * 100).round(2).astype(str) + '%'
     df['AdjEM'] = df['AdjEM'].round(2)
+    
+    # Format Torvik Stats
+    df['WAB'] = df['WAB'].round(1)
+    df['NC-SOS'] = df['ncsos'].round(3)
     
     return df
 
@@ -99,9 +112,10 @@ st.divider() # Draws a nice line across the screen
 # 📊 FULL TEAM RANKINGS TABLE
 # ==========================================
 st.header("📊 Full Team Rankings")
+st.write("**WAB:** Wins Above Bubble | **NC-SOS:** Non-Conference Strength of Schedule")
 
 # Select only the columns we want to show
-display_df = df[['Power Rank', 'TeamName', 'AdjEM', 'Predicted Win %', 'Team Profile']]
+display_df = df[['Power Rank', 'TeamName', 'AdjEM', 'Predicted Win %', 'WAB', 'NC-SOS', 'Team Profile']]
 
 # Sort by Predicted Win % (highest to lowest)
 display_df = display_df.sort_values(by='Power Rank', ascending=True)
