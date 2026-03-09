@@ -14,10 +14,11 @@ def load_data():
     
     torvik_df = torvik_df.rename(columns={'team': 'TeamName'})
     
-    # NEW: Grab 'elite SOS' and 'sos' from the Torvik file too
-    df = pd.merge(kp_df, torvik_df[['TeamName', 'WAB', 'ncsos', 'sos', 'elite SOS']], on='TeamName', how='left')
+    # NEW: Grab 'record' from the Torvik file too
+    df = pd.merge(kp_df, torvik_df[['TeamName', 'record', 'WAB', 'ncsos', 'sos', 'elite SOS']], on='TeamName', how='left')
     
     # Fill any missing merge values to prevent math errors
+    df['Record'] = df['record'].fillna('?-?')
     df['WAB'] = df['WAB'].fillna(0)
     df['ncsos'] = df['ncsos'].fillna(df['ncsos'].mean())
     df['sos'] = df['sos'].fillna(df['sos'].mean())
@@ -66,8 +67,6 @@ def load_data():
             
         else:
             return ""
-            
-    df['Team Profile'] = df.apply(tag_team, axis=1)
             
     df['Team Profile'] = df.apply(tag_team, axis=1)
     
@@ -128,15 +127,21 @@ if team_a and team_b and team_a != team_b:
     st.subheader("Matchup Result:")
     st.success(f"{winner_text} \n\n🏀 **Predicted Spread:** {spread_text} (Pace: {expected_possessions:.1f} possessions)")
     
-   # --- NEW: TALE OF THE TAPE ---
+    # --- NEW: TALE OF THE TAPE ---
     st.write("### 📊 Tale of the Tape")
     
     # We create 3 columns, but make the middle one very thin just to act as a spacer
     tcol1, tcol2, tcol3 = st.columns([1, 0.2, 1])
     
     with tcol1:
-        st.markdown(f"#### {team_a}")
-        st.write(f"**{team_a_data['Team Profile']}**" if team_a_data['Team Profile'] != "" else "*(No specific profile)*")
+        st.markdown(f"#### {team_a} ({team_a_data['Record']})")
+        
+        # Only print the profile if one exists; otherwise print a blank line
+        if team_a_data['Team Profile'] != "":
+            st.write(f"**{team_a_data['Team Profile']}**")
+        else:
+            st.write("")
+            
         st.metric("Power Rank", f"#{team_a_data['Power Rank']}")
         st.metric("Wins Above Bubble", team_a_data['WAB'])
         st.metric("Elite SOS", team_a_data['Elite SOS'])
@@ -144,8 +149,14 @@ if team_a and team_b and team_a != team_b:
     # The middle column (tcol2) is intentionally left completely blank!
 
     with tcol3:
-        st.markdown(f"#### {team_b}")
-        st.write(f"**{team_b_data['Team Profile']}**" if team_b_data['Team Profile'] != "" else "*(No specific profile)*")
+        st.markdown(f"#### {team_b} ({team_b_data['Record']})")
+        
+        # Only print the profile if one exists; otherwise print a blank line
+        if team_b_data['Team Profile'] != "":
+            st.write(f"**{team_b_data['Team Profile']}**")
+        else:
+            st.write("")
+            
         st.metric("Power Rank", f"#{team_b_data['Power Rank']}")
         st.metric("Wins Above Bubble", team_b_data['WAB'])
         st.metric("Elite SOS", team_b_data['Elite SOS'])
@@ -162,7 +173,7 @@ st.header("📊 Full Team Rankings")
 st.write("**Power Rank** is a composite score weighting Efficiency (55%), Wins Above Bubble (25%), Elite SOS (10%), and Non-Con SOS (10%).")
 
 # Select columns to show
-display_df = df[['Power Rank', 'TeamName', 'Predicted Win %', 'WAB', 'Elite SOS', 'Overall SOS', 'NC-SOS', 'Team Profile']]
+display_df = df[['Power Rank', 'TeamName', 'Record', 'Predicted Win %', 'WAB', 'Elite SOS', 'Overall SOS', 'NC-SOS', 'Team Profile']]
 
 # Sort by Power Rank
 display_df = display_df.sort_values(by='Power Rank', ascending=True)
