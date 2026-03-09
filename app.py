@@ -40,15 +40,34 @@ def load_data():
     # 3. Add a Numerical Ranking based on the new Composite Score
     df['Power Rank'] = df['Composite Score'].rank(ascending=False, method='min').astype(int)
     
+    # ==========================================
+    # 🏷️ UPGRADED TEAM PROFILING (Fraud Watch)
+    # ==========================================
     def tag_team(row):
-        if row['RankAdjOE'] <= 20 and row['RankAdjDE'] <= 20:
-            return "🏆 Championship Contender"
-        elif row['RankAdjOE'] <= 20 and row['RankAdjDE'] > 40:
-            return "🚨 Fraud Watch - Offense"
-        elif row['RankAdjDE'] <= 20 and row['RankAdjOE'] > 40:
-            return "🚨 Fraud Watch - Defense"
+        # 1. True Contender: Elite efficiency + Proven against good teams
+        if row['RankAdjOE'] <= 25 and row['RankAdjDE'] <= 25 and row['elite SOS'] >= 0.500:
+            return "🏆 True Contender"
+            
+        # 2. Paper Tiger: Great efficiency, but played a horrible schedule
+        elif (row['RankAdjOE'] <= 25 or row['RankAdjDE'] <= 25) and row['elite SOS'] < 0.450 and row['ncsos'] < 0.450:
+            return "🚨 Fraud Watch - Paper Tiger"
+            
+        # 3. All Offense, Bad Defense
+        elif row['RankAdjOE'] <= 20 and row['RankAdjDE'] > 50:
+            return "🚨 Fraud Watch - All Offense"
+            
+        # 4. All Defense, Bad Offense
+        elif row['RankAdjDE'] <= 20 and row['RankAdjOE'] > 50:
+            return "🚨 Fraud Watch - All Defense"
+            
+        # 5. Battle-Tested Grinders: Maybe not elite statistically, but have a massive resume
+        elif row['WAB'] >= 5.0 and row['elite SOS'] >= 0.600:
+            return "🛡️ Battle-Tested Threat"
+            
         else:
             return ""
+            
+    df['Team Profile'] = df.apply(tag_team, axis=1)
             
     df['Team Profile'] = df.apply(tag_team, axis=1)
     
