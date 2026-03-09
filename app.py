@@ -9,40 +9,37 @@ st.write("Statistically predictive rankings and H2H matchup predictor.")
 # 2. Load the data
 @st.cache_data
 def load_data():
-    # Reading the Excel file
     kp_df = pd.read_excel('NCAA Rankings-V3.xlsx')
-    
-    # Load Torvik data
     torvik_df = pd.read_csv('2026_team_results.csv')
     
-    # Clean up team names in Torvik to make sure they match
     torvik_df = torvik_df.rename(columns={'team': 'TeamName'})
     
-    # Merge the Torvik stats into our main KenPom dataframe
-    df = pd.merge(kp_df, torvik_df[['TeamName', 'WAB', 'ncsos', 'sos']], on='TeamName', how='left')
+    # NEW: Grab 'elite SOS' and 'sos' from the Torvik file too
+    df = pd.merge(kp_df, torvik_df[['TeamName', 'WAB', 'ncsos', 'sos', 'elite SOS']], on='TeamName', how='left')
     
     # Fill any missing merge values to prevent math errors
     df['WAB'] = df['WAB'].fillna(0)
     df['ncsos'] = df['ncsos'].fillna(df['ncsos'].mean())
+    df['sos'] = df['sos'].fillna(df['sos'].mean())
+    df['elite SOS'] = df['elite SOS'].fillna(df['elite SOS'].mean())
     
-    # Calculate Raw Win % (we need the raw decimals for the matchup math)
+    # Calculate Raw Win % 
     df['Raw Win Pct'] = (df['AdjOE']**11.5) / (df['AdjOE']**11.5 + df['AdjDE']**11.5)
 
     # ==========================================
-    # 🧮 COMPOSITE POWER RANKING MATH
+    # 🧮 UPGRADED COMPOSITE POWER RANKING MATH
     # ==========================================
-    # 1. Normalize all three metrics to a 0.0 - 1.0 scale so they can be combined fairly
     win_norm = (df['Raw Win Pct'] - df['Raw Win Pct'].min()) / (df['Raw Win Pct'].max() - df['Raw Win Pct'].min())
     wab_norm = (df['WAB'] - df['WAB'].min()) / (df['WAB'].max() - df['WAB'].min())
-    sos_norm = (df['ncsos'] - df['ncsos'].min()) / (df['ncsos'].max() - df['ncsos'].min())
+    ncsos_norm = (df['ncsos'] - df['ncsos'].min()) / (df['ncsos'].max() - df['ncsos'].min())
+    elite_norm = (df['elite SOS'] - df['elite SOS'].min()) / (df['elite SOS'].max() - df['elite SOS'].min())
     
-    # 2. Create the Weighted Composite Score (60% Math, 30% WAB, 10% SOS)
-    df['Composite Score'] = (win_norm * 0.60) + (wab_norm * 0.30) + (sos_norm * 0.10)
+    # 2. Create the Weighted Composite Score (55% Math, 25% WAB, 10% Elite SOS, 10% NC-SOS)
+    df['Composite Score'] = (win_norm * 0.55) + (wab_norm * 0.25) + (elite_norm * 0.10) + (ncsos_norm * 0.10)
     
-    # 3. Add a Numerical Ranking (1 to 360+) based on the new Composite Score!
+    # 3. Add a Numerical Ranking based on the new Composite Score
     df['Power Rank'] = df['Composite Score'].rank(ascending=False, method='min').astype(int)
     
-    # Calculate Team Profile
     def tag_team(row):
         if row['RankAdjOE'] <= 20 and row['RankAdjDE'] <= 20:
             return "🏆 Championship Contender"
@@ -55,58 +52,46 @@ def load_data():
             
     df['Team Profile'] = df.apply(tag_team, axis=1)
     
-    # Format the Display Win % as a nice percentage string
+    # Format display columns
     df['Predicted Win %'] = (df['Raw Win Pct'] * 100).round(2).astype(str) + '%'
     df['AdjEM'] = df['AdjEM'].round(2)
-    
-    # Format Torvik Stats for display
     df['WAB'] = df['WAB'].round(1)
     df['NC-SOS'] = df['ncsos'].round(3)
+    df['Overall SOS'] = df['sos'].round(3)
+    df['Elite SOS'] = df['elite SOS'].round(3)
     
     return df
 
 df = load_data()
 
 # ==========================================
-# ⚔️ NEW: HEAD-TO-HEAD MATCHUP PREDICTOR
+# ⚔️ HEAD-TO-HEAD MATCHUP PREDICTOR
 # ==========================================
 st.header("⚔️ Matchup Predictor")
 
-# Create two columns for the dropdown menus
 col1, col2 = st.columns(2)
-
-# Get an alphabetical list of all teams
 team_list = sorted(df['TeamName'].tolist())
 
 with col1:
     team_a = st.selectbox("Select Team A", team_list, index=team_list.index("Kentucky") if "Kentucky" in team_list else 0)
-    
 with col2:
     team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Louisville") if "Louisville" in team_list else 1)
 
-# Run the Math if two different teams are selected
 if team_a and team_b and team_a != team_b:
-    
-    # 1. Get the data for both teams
     pct_a = df[df['TeamName'] == team_a]['Raw Win Pct'].values[0]
     pct_b = df[df['TeamName'] == team_b]['Raw Win Pct'].values[0]
-    
     em_a = df[df['TeamName'] == team_a]['AdjEM'].values[0]
     em_b = df[df['TeamName'] == team_b]['AdjEM'].values[0]
-    
     tempo_a = df[df['TeamName'] == team_a]['AdjTempo'].values[0]
     tempo_b = df[df['TeamName'] == team_b]['AdjTempo'].values[0]
     
-    # 2. Log5 Formula for Win Probability
     prob_a = (pct_a - (pct_a * pct_b)) / (pct_a + pct_b - (2 * pct_a * pct_b))
     prob_b = 1 - prob_a
     
-    # 3. Calculate Predicted Point Spread
     expected_possessions = (tempo_a + tempo_b) / 2
     margin_per_100 = em_a - em_b
     point_spread = margin_per_100 * (expected_possessions / 100)
     
-    # Determine who is favored for the text output
     if point_spread > 0:
         spread_text = f"**{team_a} -{abs(point_spread):.1f}**"
         winner_text = f"🏆 **{team_a}** has a **{prob_a * 100:.1f}%** chance to win."
@@ -114,36 +99,31 @@ if team_a and team_b and team_a != team_b:
         spread_text = f"**{team_b} -{abs(point_spread):.1f}**"
         winner_text = f"🏆 **{team_b}** has a **{prob_b * 100:.1f}%** chance to win."
     
-    # Display the Result!
     st.subheader("Matchup Result:")
     st.success(f"{winner_text} \n\n🏀 **Predicted Spread:** {spread_text} (Pace: {expected_possessions:.1f} possessions)")
-
 elif team_a == team_b:
     st.warning("Please select two different teams to see a matchup.")
 
-st.divider() # Draws a nice line across the screen
+st.divider()
 
 # ==========================================
 # 📊 FULL TEAM RANKINGS TABLE
 # ==========================================
 st.header("📊 Full Team Rankings")
-st.write("**Power Rank** is a composite score heavily weighting Efficiency (60%), Wins Above Bubble (30%), and Non-Con SOS (10%).")
+st.write("**Power Rank** is a composite score weighting Efficiency (55%), Wins Above Bubble (25%), Elite SOS (10%), and Non-Con SOS (10%).")
 
-# Select only the columns we want to show
-display_df = df[['Power Rank', 'TeamName', 'AdjEM', 'Predicted Win %', 'WAB', 'NC-SOS', 'Team Profile']]
+# Select columns to show
+display_df = df[['Power Rank', 'TeamName', 'Predicted Win %', 'WAB', 'Elite SOS', 'Overall SOS', 'NC-SOS', 'Team Profile']]
 
-# Sort by Power Rank (highest composite score to lowest)
+# Sort by Power Rank
 display_df = display_df.sort_values(by='Power Rank', ascending=True)
 
-# Add a search bar to look up specific teams
 search = st.text_input("Search for a team to filter the table:")
 if search:
     display_df = display_df[display_df['TeamName'].str.contains(search, case=False)]
 
-# Calculate the exact height needed to show all rows (no double scrolling!)
 dynamic_height = (len(display_df) * 35) + 40
 
-# Display the interactive table on the webpage
 st.dataframe(
     display_df, 
     use_container_width=True,
