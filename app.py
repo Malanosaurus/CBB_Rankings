@@ -48,10 +48,10 @@ col1, col2 = st.columns(2)
 team_list = sorted(df['TeamName'].tolist())
 
 with col1:
-    team_a = st.selectbox("Select Team A", team_list, index=team_list.index("Duke") if "Duke" in team_list else 0)
+    team_a = st.selectbox("Select Team A", team_list, index=team_list.index("Kentucky") if "Kentucky" in team_list else 0)
     
 with col2:
-    team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Auburn") if "Auburn" in team_list else 1)
+    team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Louisville") if "Louisville" in team_list else 1)
 
 # Run the Math if two different teams are selected
 if team_a and team_b and team_a != team_b:
