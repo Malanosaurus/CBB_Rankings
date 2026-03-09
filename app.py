@@ -131,34 +131,27 @@ if team_a and team_b and team_a != team_b:
    # --- NEW: TALE OF THE TAPE ---
     st.write("### 📊 Tale of the Tape")
     
-    # Changed to 2 columns to remove the center labels
-    tcol1, tcol2 = st.columns(2)
+    # We create 3 columns, but make the middle one very thin just to act as a spacer
+    tcol1, tcol2, tcol3 = st.columns([1, 0.2, 1])
     
     with tcol1:
         st.markdown(f"#### {team_a}")
         st.write(f"**{team_a_data['Team Profile']}**" if team_a_data['Team Profile'] != "" else "*(No specific profile)*")
-        
-        # Native Streamlit metrics (Left-aligned)
         st.metric("Power Rank", f"#{team_a_data['Power Rank']}")
         st.metric("Wins Above Bubble", team_a_data['WAB'])
         st.metric("Elite SOS", team_a_data['Elite SOS'])
 
-    with tcol2:
-        # Determine the profile string for Team B
-        profile_b = f"**{team_b_data['Team Profile']}**" if team_b_data['Team Profile'] != "" else "*(No specific profile)*"
-        
-        # Using HTML to force Team B's stats to right-align and perfectly mirror Team A
-        st.markdown(f"<h4 style='text-align: right;'>{team_b}</h4>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'>{profile_b}</div><br>", unsafe_allow_html=True)
-        
-        # Recreating the "metric" visual style, but pushed to the right
-        st.markdown(f"<div style='text-align: right;'><span style='font-size: 14px; color: gray;'>Power Rank</span><h2 style='margin-top: -5px;'>#{team_b_data['Power Rank']}</h2></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'><span style='font-size: 14px; color: gray;'>Wins Above Bubble</span><h2 style='margin-top: -5px;'>{team_b_data['WAB']}</h2></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'><span style='font-size: 14px; color: gray;'>Power Rank</span><h2 style='margin-top: -5px;'>#{team_b_data['Power Rank']}</h2></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'><span style='font-size: 14px; color: gray;'>Wins Above Bubble</span><h2 style='margin-top: -5px;'>{team_b_data['WAB']}</h2></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'><span style='font-size: 14px; color: gray;'>Elite SOS</span><h2 style='margin-top: -5px;'>{team_b_data['Elite SOS']}</h2></div>", unsafe_allow_html=True)
+    # The middle column (tcol2) is intentionally left completely blank!
+
+    with tcol3:
+        st.markdown(f"#### {team_b}")
+        st.write(f"**{team_b_data['Team Profile']}**" if team_b_data['Team Profile'] != "" else "*(No specific profile)*")
+        st.metric("Power Rank", f"#{team_b_data['Power Rank']}")
+        st.metric("Wins Above Bubble", team_b_data['WAB'])
+        st.metric("Elite SOS", team_b_data['Elite SOS'])
+
 elif team_a == team_b:
-    st.warning("Please select two different teams to compare.")
+    st.warning("Please select two different teams to see a matchup.")
 
 st.divider()
 
