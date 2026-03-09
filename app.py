@@ -48,27 +48,44 @@ col1, col2 = st.columns(2)
 team_list = sorted(df['TeamName'].tolist())
 
 with col1:
-    team_a = st.selectbox("Select Team A", team_list, index=team_list.index("Kentucky") if "Kentucky" in team_list else 0)
+    team_a = st.selectbox("Select Team A", team_list, index=team_list.index("Duke") if "Duke" in team_list else 0)
     
 with col2:
-    team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Louisville") if "Louisville" in team_list else 1)
+    team_b = st.selectbox("Select Team B", team_list, index=team_list.index("Auburn") if "Auburn" in team_list else 1)
 
-# Run the Log5 Math if two different teams are selected
+# Run the Math if two different teams are selected
 if team_a and team_b and team_a != team_b:
-    # Look up the raw win percentages for both teams
+    
+    # 1. Get the data for both teams
     pct_a = df[df['TeamName'] == team_a]['Raw Win Pct'].values[0]
     pct_b = df[df['TeamName'] == team_b]['Raw Win Pct'].values[0]
     
-    # Log5 Formula
+    em_a = df[df['TeamName'] == team_a]['AdjEM'].values[0]
+    em_b = df[df['TeamName'] == team_b]['AdjEM'].values[0]
+    
+    tempo_a = df[df['TeamName'] == team_a]['AdjTempo'].values[0]
+    tempo_b = df[df['TeamName'] == team_b]['AdjTempo'].values[0]
+    
+    # 2. Log5 Formula for Win Probability
     prob_a = (pct_a - (pct_a * pct_b)) / (pct_a + pct_b - (2 * pct_a * pct_b))
     prob_b = 1 - prob_a
     
+    # 3. Calculate Predicted Point Spread
+    expected_possessions = (tempo_a + tempo_b) / 2
+    margin_per_100 = em_a - em_b
+    point_spread = margin_per_100 * (expected_possessions / 100)
+    
+    # Determine who is favored for the text output
+    if point_spread > 0:
+        spread_text = f"**{team_a} -{abs(point_spread):.1f}**"
+        winner_text = f"🏆 **{team_a}** has a **{prob_a * 100:.1f}%** chance to win."
+    else:
+        spread_text = f"**{team_b} -{abs(point_spread):.1f}**"
+        winner_text = f"🏆 **{team_b}** has a **{prob_b * 100:.1f}%** chance to win."
+    
     # Display the Result!
     st.subheader("Matchup Result:")
-    if prob_a > prob_b:
-        st.success(f"🏆 **{team_a}** has a **{prob_a * 100:.1f}%** chance to beat {team_b}.")
-    else:
-        st.success(f"🏆 **{team_b}** has a **{prob_b * 100:.1f}%** chance to beat {team_a}.")
+    st.success(f"{winner_text} \n\n🏀 **Predicted Spread:** {spread_text} (Pace: {expected_possessions:.1f} possessions)")
 
 elif team_a == team_b:
     st.warning("Please select two different teams to see a matchup.")
